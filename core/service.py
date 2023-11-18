@@ -3,6 +3,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn import tree
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer 
+from deep_translator import GoogleTranslator
 import matplotlib.pyplot as plt
 import spacy
 import pt_core_news_sm
@@ -51,18 +53,39 @@ class Chat():
     tokens = ' '.join(element for element in tokens)
     return tokens
 
+  def translated_phrase(self, phrase):
+    try:
+        translation = GoogleTranslator(source='auto', target='en').translate(phrase)
+        return translation
+    except Exception as e:
+        print('Erro ao converter frase')
+      
+  def sentiment_scores(self, sentence):  
+    sid_obj = SentimentIntensityAnalyzer() 
+    sentiment_dict = sid_obj.polarity_scores(sentence)
+    
+    if sentiment_dict['compound'] >= 0.05 : 
+        #Positivo
+        return 2
+  
+    elif sentiment_dict['compound'] <= - 0.05 : 
+        #Negative
+        return 0
+  
+    else : 
+        #Neutro
+        return 1
+
   def avaliate(self, sentence):
     self.x_test_cleaned.append(sentence)
     x_test_cleanned_lemma = [self.preprocessing_lemma(tweet) for tweet in self.x_test_cleaned]
     x_test_tfidf = self.vectorizer.transform(x_test_cleanned_lemma)
     predictions = self.model.predict(x_test_tfidf)
-    print(predictions)
-    if predictions[-1] == 'Negativo':
-      return 0
-    elif predictions[-1] == 'Neutro':
-      return 1
-    else:
-      return 2
+    print( 'Valor da matriz ',predictions[-1])
+    new_sentence = self.translated_phrase(sentence)
+    score = self.sentiment_scores(new_sentence)
+    print( 'Valor de score ',score)
+    return score
   
   def welcome_message(self, text):
     for word in text.split():
@@ -104,9 +127,9 @@ class Chat():
       if sentence_humor == 0:
         return "Você parece negativo... posso fazer algo pra te ajudar?"
       elif sentence_humor == 1:
-        return "Que interessante!"
+        return "Que interessante, mas você parece neutro em sua fala!"
       else:
-        return "Você parece positivo por sua mensagem!"
+        return "Vamos lá amigo, quero que mantenha essa positividade!"
     elif self.type_bot == "Ódio":
       if sentence_humor == 0:
         return "ESTÁ TENTANDO DESCONTAR ALGO EM MIM?"
